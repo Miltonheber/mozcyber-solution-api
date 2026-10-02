@@ -3,7 +3,7 @@
 Documento orientador para qualquer dev ou IA que continue este projecto. **Leia antes de escrever código e mantenha-o actualizado.**
 
 ## 1. Stack
-Python 3.12 · Django 5.1 · Django REST Framework (**`APIView`**, sem ViewSets/generics) · `djangorestframework-simplejwt` · `drf-spectacular` (Swagger) · PostgreSQL (SQLite como fallback local) · `gunicorn` · `whitenoise` · `django-environ` · gestão de dependências com **`uv`** · testes com `pytest` + `pytest-django` + `factory-boy` · lint/format com `ruff`.
+Python 3.12 · Django 5.1 · Django REST Framework (**`APIView`**, sem ViewSets/generics) · `djangorestframework-simplejwt` · `drf-spectacular` (Swagger) · PostgreSQL (SQLite como fallback local) · `gunicorn` · `whitenoise` · `django-environ` · gestão de dependências com **`uv`** · shell com `ipython` (dev), testes com `pytest` + `pytest-django` + `factory-boy` · lint/format com `ruff`.
 
 ## 2. Comandos
 ```bash
@@ -13,10 +13,12 @@ uv run python manage.py migrate
 uv run python manage.py seed_access       # cria permissões do catálogo + perfil admin (idempotente)
 uv run python manage.py createsuperuser   # login por email
 uv run python manage.py runserver
+uv run python manage.py shell            # shell interactivo com IPython (dev dep) e models auto-importados
 uv run pytest [-k nome] [--cov=apps]      # testes (usa SQLite por omissão, --reuse-db)
 uv run ruff check --fix . && uv run ruff format .
 uv run python manage.py spectacular --validate --fail-on-warn   # valida o OpenAPI
 
+docker compose exec web python manage.py shell   # IPython dentro do container
 docker compose up --build                 # db (postgres) + web (gunicorn); porta via WEB_PORT (default 8000)
 ```
 Config por `.env` (copiar de `.env.example`). Sem `DATABASE_URL` usa `db.sqlite3`; o compose injecta o URL do Postgres.
@@ -112,7 +114,10 @@ apps/
 - [Dockerfile](Dockerfile): multi-stage, `python:3.12-slim`; stage `build` instala deps com `uv sync --frozen --no-dev` e corre `collectstatic`; stage final só leva `/app` (+ venv), corre como utilizador não-root com **gunicorn** (`config.wsgi`, 3 workers).
 - [docker-compose.yml](docker-compose.yml): `db` (postgres:16-alpine, healthcheck, volume `pgdata`) e `web` (espera o db saudável; `DATABASE_URL` montado a partir de `POSTGRES_*`). Porta do host: `WEB_PORT`.
 - Estáticos: **WhiteNoise** logo a seguir ao `SecurityMiddleware`, `CompressedManifestStaticFilesStorage`, `STATIC_ROOT=staticfiles/`. Em produção definir `SECRET_KEY` forte, `DEBUG=False`, `ALLOWED_HOSTS`.
-- Dependências novas: `uv add ...` e fazer commit do `uv.lock` (o build usa `--frozen`).
+- `INSTALL_DEV` (build arg, default `false` no Dockerfile, `true` no compose) inclui o grupo `dev` (ipython, pytest) na imagem; em produção usar `INSTALL_DEV=false`. Dependências novas: `uv add ...` e fazer commit do `uv.lock` (o build usa `--frozen`).
 
-## 13. Variáveis de ambiente
-`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `POSTGRES_DB/USER/PASSWORD`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `WEB_PORT` (ver [.env.example](.env.example)).
+## 13. CORS
+`django-cors-headers` com `CORS_ALLOW_ALL_ORIGINS = True` (todas as origens), `CorsMiddleware` logo após o WhiteNoise. Seguro aqui porque a auth é por header `Authorization: Bearer` (sem cookies/credenciais). Para restringir: trocar por `CORS_ALLOWED_ORIGINS`.
+
+## 14. Variáveis de ambiente
+`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `POSTGRES_DB/USER/PASSWORD`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).

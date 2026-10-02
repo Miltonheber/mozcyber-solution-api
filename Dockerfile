@@ -4,8 +4,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_NO_CACHE=1
 WORKDIR /app
 
+# INSTALL_DEV=true inclui o grupo dev (ipython, pytest...) — o compose liga-o, produção não
+ARG INSTALL_DEV=false
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-install-project $([ "$INSTALL_DEV" = "true" ] || echo --no-dev)
 
 COPY . .
 RUN SECRET_KEY=build-only .venv/bin/python manage.py collectstatic --noinput

@@ -14,7 +14,10 @@ services:
       retries: 10
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV: ${INSTALL_DEV:-true}
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-mozcyber}:${POSTGRES_PASSWORD:-mozcyber}@db:5432/${POSTGRES_DB:-mozcyber}
