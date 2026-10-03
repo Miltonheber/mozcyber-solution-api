@@ -24,7 +24,7 @@ Python 3.12 · Django 5.1 · DRF · simplejwt · drf-spectacular · MySQL · gun
 ### Com Docker (recomendado)
 
 ```bash
-cp .env.example .env            # ajuste WEB_PORT se a 8082 estiver ocupada
+cp .env.example .env            # ajuste WEB_PORT se a 8000 estiver ocupada
 docker compose up --build
 ```
 
@@ -82,12 +82,12 @@ uv run python manage.py runserver
 
 ```bash
 # 1. login (devolve access e refresh)
-curl -X POST http://localhost:8082/api/v1/auth/login/ \
+curl -X POST http://localhost:8000/api/v1/auth/login/ \
   -H 'Content-Type: application/json' \
   -d '{"email": "voce@exemplo.com", "password": "sua-password"}'
 
 # 2. chamar um endpoint protegido (paginado)
-curl 'http://localhost:8082/api/v1/users/?page=1&size=10&search=ana' \
+curl 'http://localhost:8000/api/v1/users/?page=1&size=10&search=ana' \
   -H 'Authorization: Bearer <access>'
 ```
 
@@ -148,7 +148,7 @@ Cada funcionalidade ou endpoint novo precisa de testes: sucesso, 401, 403, valid
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_ROOT_PASSWORD` | credenciais do MySQL no compose | `mozcyber` / `mozcyber` / `mozcyber` / `root` |
 | `DB_PORT` | porta do MySQL publicada no host | `3307` |
 | `ACCESS_TOKEN_MINUTES` / `REFRESH_TOKEN_DAYS` | validade dos tokens | `30` / `7` |
-| `WEB_PORT` | porta publicada no host | `8082` |
+| `WEB_PORT` | porta publicada no host | `8000` |
 | `INSTALL_DEV` | instala dependências de desenvolvimento na imagem (ipython, pytest) | `true` no compose, `false` no Dockerfile |
 
 ## Produção
