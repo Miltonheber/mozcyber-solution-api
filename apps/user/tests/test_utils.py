@@ -46,3 +46,18 @@ def test_seed_access_is_idempotent_and_admin_gets_everything():
     seed_access()
     admin = seed_access()
     assert admin.permissions.count() == len(PERMISSION_CATALOG)
+
+
+def test_seed_access_creates_operational_profiles():
+    from apps.user.models import Profile
+
+    seed_access()
+    seed_access()
+    police = Profile.objects.get(code="esquadra")
+    entity = Profile.objects.get(code="entidade")
+    assert set(police.permissions.values_list("code", flat=True)) == {
+        "occurrence:create",
+        "occurrence:read",
+        "occurrence:update",
+    }
+    assert set(entity.permissions.values_list("code", flat=True)) == {"occurrence:read"}

@@ -10,6 +10,7 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["*"]),
     ACCESS_TOKEN_MINUTES=(int, 30),
     REFRESH_TOKEN_DAYS=(int, 7),
+    MESSAGE_CLASSIFIER=(str, "apps.reputation.services.classifier.RuleBasedClassifier"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -31,6 +32,9 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.user",
     "apps.audit_log",
+    "apps.reputation",
+    "apps.education",
+    "apps.occurrences",
 ]
 
 MIDDLEWARE = [
@@ -102,6 +106,12 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "apps.core.schema.BaseAutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exception_handler.api_exception_handler",
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # Limites das views públicas (PublicAPIView.throttle_scope). Cache por processo (LocMem por omissão).
+    "DEFAULT_THROTTLE_RATES": {
+        "public_classify": "20/min",
+        "public_report": "10/min",
+        "public_read": "60/min",
+    },
 }
 
 SIMPLE_JWT = {
@@ -118,4 +128,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+",
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "NumberStatusEnum": "apps.reputation.constants.NumberStatus.choices",
+        "ReportStatusEnum": "apps.reputation.constants.ReportStatus.choices",
+    },
 }
+
+# Classificador de mensagens (caminho do módulo da classe). Trocar por um provider de IA sem tocar nos services.
+MESSAGE_CLASSIFIER = env("MESSAGE_CLASSIFIER")

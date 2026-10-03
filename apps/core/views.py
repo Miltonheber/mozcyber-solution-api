@@ -1,6 +1,7 @@
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .pagination import StandardPagination
@@ -35,9 +36,25 @@ class BaseAPIView(APIView):
         data = serializer_class(page, many=True, context=self.get_serializer_context()).data
         return paginator.get_paginated_response(data)
 
+    def get_actor(self, request):
+        """Utilizador autenticado ou `None` (pedidos anónimos em views públicas)."""
+        user = getattr(request, "user", None)
+        return user if user is not None and user.is_authenticated else None
+
     def respond(self, instance, status_code=status.HTTP_200_OK):
         data = self.read_serializer_class(instance, context=self.get_serializer_context()).data
         return Response(data, status=status_code)
+
+
+class PublicAPIView(BaseAPIView):
+    """Base das views públicas (sem autenticação). Obrigatório declarar `throttle_scope` (taxa em
+    `DEFAULT_THROTTLE_RATES`), porque os endpoints são abertos a abuso. Expor só serializers reduzidos.
+    """
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope: str | None = None
 
 
 class ListMixin:
@@ -49,7 +66,7 @@ class CreateMixin:
     def create(self, request):
         serializer = self.write_serializer_class(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
-        instance = self.service.create(serializer.validated_data, actor=request.user)
+        instance = self.service.create(serializer.validated_data, actor=self.get_actor(request))
         return self.respond(instance, status.HTTP_201_CREATED)
 
 
@@ -65,7 +82,7 @@ class UpdateMixin:
             instance, data=request.data, partial=True, context=self.get_serializer_context()
         )
         serializer.is_valid(raise_exception=True)
-        instance = self.service.update(instance, serializer.validated_data, actor=request.user)
+        instance = self.service.update(instance, serializer.validated_data, actor=self.get_actor(request))
         return self.respond(instance)
 
 

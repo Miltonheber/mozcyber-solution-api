@@ -32,7 +32,11 @@ apps/
                    BaseRepository, BaseService, BaseAPIView + mixins CRUD, schema (OpenAPI), utils, testing/
   user/            User (login por email), Profile, Permission, auth JWT, CRUD
   audit_log/       ActionLog genérico + LogService + LoggingMixin
+  reputation/      PhoneNumber (blacklist/reputação), MessageClassification (histórico da IA), NumberReport (denúncias/burlas)
+  education/       Post (conteúdo educativo; público só `published`)
+  occurrences/     LostDocumentOccurrence (documentos perdidos; criada por perfil `esquadra`, lida por `entidade`)
 ```
+**Domínio:** zona **pública** (classificar, denunciar, ler posts) vs **privada** (publicar posts, ocorrências, moderação). Registos criados por anónimos têm `created_by = null`. Números sempre normalizados com `normalize_phone` ([apps/core/utils.py](apps/core/utils.py)) antes de gravar/consultar. Esquadras/entidades são apenas Profiles (`esquadra`, `entidade`, criados por `seed_access`; `station_name` na ocorrência identifica a esquadra). Fase 1 (reputation) implementada; `education` e `occurrences` só têm modelos.
 **Cada app tem obrigatoriamente** as camadas: `models`, `repositories/`, `services/`, `serializers/`, `views/`, `urls` (módulo ou pacote), `utils/`, `tests/`.
 
 ## 4. Arquitectura em camadas (regra de ouro)
@@ -81,6 +85,12 @@ apps/
   `HasPermission` lê o decorador do handler do método e valida contra a claim `permissions` do token **sem tocar na BD**; exige TODAS as permissões listadas. Método sem decorador ⇒ basta estar autenticado (default global `IsAuthenticated`). Não existe `required_permissions` ao nível da classe.
 - `GET /api/v1/auth/me/` devolve o utilizador e as claims.
 
+### Views públicas (sem autenticação)
+- Herdam `PublicAPIView` ([apps/core/views.py](apps/core/views.py)): sem JWT, `AllowAny`, `ScopedRateThrottle`. **Obrigatório** `throttle_scope` (taxas em `DEFAULT_THROTTLE_RATES`: `public_classify`, `public_report`, `public_read`). A cache de throttling é por processo (LocMem) — com vários workers o limite efectivo multiplica; para limite global usar Redis/DB cache.
+- Views públicas usam `@extend_schema` e serializers **reduzidos** (nunca expor IP/contacto do denunciante). Os mixins CRUD usam `self.get_actor(request)` (`None` para anónimos).
+- Rotas públicas em `/api/v1/public/…` (`classify/`, `reports/`, `numbers/<phone>/`); moderação autenticada em `blacklist/` e `reports/`.
+- Classificação: `settings.MESSAGE_CLASSIFIER` (env) aponta para a classe que implementa `MessageClassifier` ([apps/reputation/services/classifier.py](apps/reputation/services/classifier.py)); default `RuleBasedClassifier`. Reputação (score/blacklist) em [apps/reputation/utils/scoring.py](apps/reputation/utils/scoring.py); contadores sempre recontados dos registos.
+
 ## 8. BaseModel
 [apps/core/models.py](apps/core/models.py): `id` (UUID), `created_at`, `updated_at`, `created_by`, `updated_by` (FK ao user, `related_name="+"`), `is_active`; ordering por `-created_at`. Todos os modelos de negócio herdam dele. `created_by/updated_by` são preenchidos pelo `BaseRepository.create/update(actor=request.user)` — os mixins de view já passam o actor. Em modelos com `Meta` próprio: `class Meta(BaseModel.Meta)`.
 
@@ -120,4 +130,4 @@ apps/
 `django-cors-headers` com `CORS_ALLOW_ALL_ORIGINS = True` (todas as origens), `CorsMiddleware` logo após o WhiteNoise. Seguro aqui porque a auth é por header `Authorization: Bearer` (sem cookies/credenciais). Para restringir: trocar por `CORS_ALLOWED_ORIGINS`.
 
 ## 14. Variáveis de ambiente
-`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `DB_NAME/USER/PASSWORD/ROOT_PASSWORD`, `DB_PORT`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).
+`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `DB_NAME/USER/PASSWORD/ROOT_PASSWORD`, `DB_PORT`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `MESSAGE_CLASSIFIER`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).

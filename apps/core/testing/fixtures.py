@@ -35,3 +35,13 @@ def auth_client(db):
         return client
 
     return make
+
+
+@pytest.fixture(autouse=True)
+def clear_throttle_cache():
+    """Os contadores de throttling vivem na cache; limpar entre testes."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
