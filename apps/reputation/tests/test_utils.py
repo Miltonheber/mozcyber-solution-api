@@ -12,10 +12,10 @@ U, S, B = NumberStatus.UNKNOWN, NumberStatus.SUSPICIOUS, NumberStatus.BLACKLISTE
     [
         (dict(reports=0, frauds=0, current_status=U), (0, U)),
         (dict(reports=1, frauds=0, current_status=U), (20, S)),
-        (dict(reports=3, frauds=0, current_status=U), (60, B)),
-        (dict(reports=0, frauds=1, current_status=U, high_confidence_fraud=True), (25, B)),
+        (dict(reports=3, frauds=0, current_status=U), (70, B)),  # blacklist => score mínimo
+        (dict(reports=0, frauds=1, current_status=U, high_confidence_fraud=True), (70, B)),
         (dict(reports=0, frauds=1, current_status=U), (25, S)),
-        (dict(reports=0, frauds=0, current_status=B), (0, B)),  # nunca baixa sozinho
+        (dict(reports=0, frauds=0, current_status=B), (70, B)),  # nunca baixa sozinho
         (dict(reports=10, frauds=10, current_status=U), (100, B)),
     ],
 )

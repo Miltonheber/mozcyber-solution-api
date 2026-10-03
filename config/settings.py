@@ -51,6 +51,7 @@ MIDDLEWARE = [
 
 # CORS: todas as origens permitidas (auth é por Bearer token, não por cookies)
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_EXPOSE_HEADERS = ["Retry-After"]  # o frontend mostra o tempo de espera do 429
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
