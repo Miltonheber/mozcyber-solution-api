@@ -63,7 +63,7 @@ apps/
 ## 6. API: prefixo, versão, paginação, erros
 - Tudo em `/api/<versão>/...` (`URLPathVersioning`, versões permitidas em `ALLOWED_VERSIONS`, hoje `v1`). Novas rotas entram em [config/api_urls.py](config/api_urls.py). `reverse()` precisa de `kwargs={"version": "v1"}`.
 - Paginação: `?page=1&size=20` (size máx. 100) → `{count, next, previous, results}` ([apps/core/pagination.py](apps/core/pagination.py)). Listagens usam `self.paginate(qs, request)`.
-- Filtros/pesquisa: o repository declara `filter_fields` (filtros exactos permitidos via query param) e `search_fields` (`?search=`). Params fora da whitelist são ignorados.
+- Filtros/pesquisa: o repository declara `filter_fields` (filtros exactos permitidos via query param) e `search_fields` (`?search=`). Params fora da whitelist são ignorados. Intervalos e ordenação: `range_fields` (`{param: (campo, "gte"|"lte")}`, data `AAAA-MM-DD` ou data-hora ISO) e `ordering_fields` (`?ordering=a,-b`) no repository; valor inválido ⇒ 400 `invalid_filter`.
 - **Erros** têm sempre o formato `{"code": str, "message": str, "details": any|null}`. Para erros de negócio, o service levanta uma `BusinessException` de [apps/core/exceptions.py](apps/core/exceptions.py) (`ValidationException` 400, `UnauthorizedException` 401, `PermissionDeniedException` 403, `NotFoundException` 404, `ConflictException` 409). Nunca devolver `Response` de erro à mão. Códigos próprios: `raise NotFoundException("...", code="user_not_found")`.
 - Swagger: `BaseAutoSchema` ([apps/core/schema.py](apps/core/schema.py)) gera o OpenAPI a partir de `read_serializer_class`/`write_serializer_class`/`service_class`. Views fora do padrão (login…) usam `@extend_schema`. Validar com `spectacular --validate --fail-on-warn`.
 

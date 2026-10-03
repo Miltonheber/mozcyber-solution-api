@@ -42,4 +42,18 @@ class BaseAutoSchema(AutoSchema):
             params.append(
                 OpenApiParameter("search", str, description="Pesquisa em: " + ", ".join(repo.search_fields))
             )
+        for param, (field, lookup) in getattr(repo, "range_fields", {}).items():
+            bound = "a partir de" if lookup == "gte" else "até (inclusive)"
+            params.append(
+                OpenApiParameter(param, str, description=f"{field} {bound}: AAAA-MM-DD ou data-hora ISO")
+            )
+        if getattr(repo, "ordering_fields", ()):
+            params.append(
+                OpenApiParameter(
+                    "ordering",
+                    str,
+                    description="Ordenação (prefixo - = descendente; vírgulas para vários): "
+                    + ", ".join(repo.ordering_fields),
+                )
+            )
         return params

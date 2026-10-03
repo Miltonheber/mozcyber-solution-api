@@ -105,3 +105,26 @@ def test_list_has_constant_queries_no_n_plus_1(auth_client, django_assert_max_nu
     client = auth_client(ENTITY)
     with django_assert_max_num_queries(3):
         assert_paginated(client.get(url("occurrence-list")), count=10)
+
+
+def test_entity_filters_by_date_range_and_ordering(auth_client, django_assert_max_num_queries):
+    for day in (1, 10, 20, 28):
+        LostDocumentOccurrenceFactory(lost_at=datetime.date(2026, 5, day))
+    entity = auth_client(ENTITY)
+    response = entity.get(url("occurrence-list"), {"lost_at_from": "2026-05-05", "lost_at_to": "2026-05-20"})
+    assert_paginated(response, count=2)
+    ordered = entity.get(url("occurrence-list"), {"ordering": "-lost_at", "size": 2, "page": 1})
+    assert [o["lost_at"] for o in ordered.data["results"]] == ["2026-05-28", "2026-05-20"]
+    with django_assert_max_num_queries(4):
+        entity.get(url("occurrence-list"), {"created_from": "2026-01-01", "ordering": "reference"})
+
+
+def test_invalid_filters_return_400(auth_client):
+    entity = auth_client(ENTITY)
+    assert_error(entity.get(url("occurrence-list"), {"lost_at_from": "ontem"}), 400, "invalid_filter")
+    assert_error(entity.get(url("occurrence-list"), {"ordering": "owner_name"}), 400, "invalid_filter")
+    assert_error(
+        entity.get(url("occurrence-list"), {"created_from": "2026-05-02", "created_to": "2026-05-01"}),
+        400,
+        "invalid_filter",
+    )

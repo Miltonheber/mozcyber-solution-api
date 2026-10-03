@@ -270,6 +270,11 @@ Criadas por utilizadores do perfil `esquadra` e consultadas por `entidade` (ou `
 
 Não há `DELETE` (as ocorrências ficam como registo). Filtros exactos: `status` (`open`, `found`, `closed`), `document_type` (`bi`, `passport`, `driving_license`, `dire`, `other`), `document_number`, `station_name`, `reference` · pesquisa: `?search=` (referência, nº do documento, nome do titular). Para uma entidade encontrar um documento, use `?document_number=…` (exacto, em maiúsculas).
 
+**Intervalos de datas** (inclusivos; `AAAA-MM-DD` = dia inteiro, ou data-hora ISO como `2026-10-03T08:00:00+02:00`): `lost_at_from` / `lost_at_to` (data da perda) e `created_from` / `created_to` (data de registo). **Ordenação:** `?ordering=` com `created_at`, `updated_at`, `lost_at`, `reference`, `closed_at`; prefixo `-` = descendente; vários separados por vírgula (ex.: `-lost_at,reference`). Por omissão, mais recentes primeiro. Os filtros combinam-se entre si e com `?search=`. Data inválida, intervalo invertido (`from` > `to`) ou campo de ordenação não permitido → **400** `invalid_filter`; parâmetros desconhecidos são ignorados.
+```
+GET /api/v1/occurrences/?status=open&lost_at_from=2026-09-01&lost_at_to=2026-09-30&ordering=-lost_at&size=50
+```
+
 Criar (`POST`):
 ```json
 {
