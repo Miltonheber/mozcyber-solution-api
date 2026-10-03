@@ -1,6 +1,6 @@
 # Mozcyber API — guia para o frontend
 
-Base URL: `/api/v1/` · Swagger interactivo: `/api/docs/` · schema: `/api/schema/`.
+Base URL: `http://localhost:8082/api/v1/` (dev; frontend em `http://localhost:8081`) · Swagger interactivo: `/api/docs/` · schema: `/api/schema/`.
 Formato: JSON. CORS aberto a todas as origens (a autenticação é por header, sem cookies).
 
 > **Estado:** disponível agora — autenticação, classificação de mensagens, denúncias, reputação de números e moderação (blacklist/denúncias). **Ainda não existe** API para conteúdo educativo (`education`) nem para ocorrências de documentos perdidos (`occurrences`).

@@ -12,14 +12,14 @@ uv add <pkg> / uv add --dev <pkg>         # adicionar dependência
 uv run python manage.py migrate
 uv run python manage.py seed_access       # cria permissões do catálogo + perfil admin (idempotente)
 uv run python manage.py createsuperuser   # login por email
-uv run python manage.py runserver
+uv run python manage.py runserver 8082   # porta do backend (o frontend usa 8081)
 uv run python manage.py shell            # shell interactivo com IPython (dev dep) e models auto-importados
 uv run pytest [-k nome] [--cov=apps]      # testes (usa SQLite por omissão, --reuse-db)
 uv run ruff check --fix . && uv run ruff format .
 uv run python manage.py spectacular --validate --fail-on-warn   # valida o OpenAPI
 
 docker compose exec web python manage.py shell   # IPython dentro do container
-docker compose up --build                 # db (mysql) + web (gunicorn); porta via WEB_PORT (default 8000)
+docker compose up --build                 # db (mysql) + web (gunicorn); porta via WEB_PORT (default 8082)
 ```
 Config por `.env` (copiar de `.env.example`). Sem `DATABASE_URL` usa `db.sqlite3`; o compose injecta o URL do MySQL. **SQLite local e MySQL do Docker são bases diferentes**; para partilhar, subir `db` e pôr `DATABASE_URL=mysql://mozcyber:mozcyber@127.0.0.1:3307/mozcyber` no `.env`.
 Swagger: `/api/docs/` · schema: `/api/schema/`. O container corre `migrate` + `seed_access` no arranque ([docker-entrypoint.sh](docker-entrypoint.sh)).

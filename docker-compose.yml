@@ -26,7 +26,7 @@ services:
     environment:
       DATABASE_URL: mysql://${DB_USER:-mozcyber}:${DB_PASSWORD:-mozcyber}@db:3306/${DB_NAME:-mozcyber}
     ports:
-      - "${WEB_PORT:-8000}:8000"
+      - "${WEB_PORT:-8082}:8000"
     depends_on:
       db:
         condition: service_healthy
