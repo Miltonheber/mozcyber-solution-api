@@ -19,6 +19,7 @@ PERMISSION_CATALOG = {
     "blacklist:update": "Moderar números (confirmar/limpar)",
     "report:read": "Listar/ver denúncias",
     "report:update": "Moderar denúncias",
+    "education:read": "Listar/ver conteúdo educativo (inclui rascunhos)",
     "education:create": "Criar conteúdo educativo",
     "education:update": "Editar conteúdo educativo",
     "education:delete": "Remover conteúdo educativo",

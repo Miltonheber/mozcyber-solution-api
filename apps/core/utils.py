@@ -1,4 +1,16 @@
-SENSITIVE_KEYS = {"password", "old_password", "new_password", "token", "access", "refresh", "secret"}
+SENSITIVE_KEYS = {
+    "password",
+    "old_password",
+    "new_password",
+    "token",
+    "access",
+    "refresh",
+    "secret",
+    # dados pessoais (ocorrências, denúncias)
+    "document_number",
+    "owner_contact",
+    "reporter_contact",
+}
 
 
 def redact(data):

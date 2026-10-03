@@ -3,7 +3,7 @@
 Base URL: `http://localhost:8000/api/v1/` (dev; frontend em `http://localhost:3000`) · Swagger interactivo: `/api/docs/` · schema: `/api/schema/`.
 Formato: JSON. CORS aberto a todas as origens (a autenticação é por header, sem cookies).
 
-> **Estado:** disponível agora — autenticação, classificação de mensagens, denúncias, reputação de números e moderação (blacklist/denúncias). **Ainda não existe** API para conteúdo educativo (`education`) nem para ocorrências de documentos perdidos (`occurrences`).
+> **Estado:** disponível — autenticação, classificação de mensagens, denúncias, reputação de números, moderação (blacklist/denúncias), **conteúdo educativo** (leitura pública + gestão) e **ocorrências de documentos perdidos** (esquadra/entidades).
 
 ## 1. Convenções
 
@@ -129,6 +129,19 @@ Número nunca visto **não é 404**: devolve `status: "unknown"`, `risk_score: 0
 
 ---
 
+### 2.4 Conteúdo educativo
+`GET /api/v1/public/posts/` · `GET /api/v1/public/posts/{slug}/` · throttle 60/min
+
+Só devolve publicações `published` (rascunhos nunca aparecem; `404` com `code: "post_not_found"`).
+
+Listagem paginada (`?page`, `?size`), filtros `topic` (`scams`, `social_engineering`, `credentials`, `sim_swap`) e `?search=` (título e resumo). Mais recentes primeiro. Item (sem corpo):
+```json
+{ "id": "uuid", "title": "Troca de SIM explicada", "slug": "troca-de-sim-explicada", "summary": "…", "topic": "sim_swap", "cover_image_url": "", "published_at": "2026-10-03T10:00:00Z" }
+```
+Detalhe por `slug`: os mesmos campos + `body` (texto completo; texto simples com quebras de linha).
+
+---
+
 ## 3. Autenticação (zona privada)
 
 | Rota | Corpo | Resposta |
@@ -146,7 +159,7 @@ Número nunca visto **não é 404**: devolve `status: "unknown"`, `risk_score: 0
 | Perfil | Permissões |
 |---|---|
 | `admin` | todas |
-| `esquadra` | `occurrence:create`, `occurrence:read`, `occurrence:update` (para a fase das ocorrências) |
+| `esquadra` | `occurrence:create`, `occurrence:read`, `occurrence:update` |
 | `entidade` | `occurrence:read` |
 
 Moderação de blacklist/denúncias usa `blacklist:read|update` e `report:read|update` (por omissão só o `admin`).
@@ -214,3 +227,61 @@ Por IP e por minuto: classificar **20**, denunciar **10**, consultar reputação
 - IDs são UUID. Datas em ISO 8601 (UTC).
 - Os números dos endpoints públicos não precisam de ser validados no cliente além de “não vazio”; a API devolve 400 com mensagem em português.
 - A classificação actual usa regras locais; o provider de IA será trocado no servidor sem alterar este contrato.
+
+---
+
+## 8. Gestão de conteúdo educativo (privado)
+
+Todos exigem `Authorization: Bearer <access>`.
+
+| Rota | Permissão | Descrição |
+|---|---|---|
+| `GET posts/` | `education:read` | listagem paginada **com rascunhos** |
+| `POST posts/` | `education:create` | criar (entra como `draft`) |
+| `GET posts/{id}/` | `education:read` | detalhe |
+| `PATCH posts/{id}/` | `education:update` | editar / publicar |
+| `DELETE posts/{id}/` | `education:delete` | remover (204) |
+
+Filtros: `status` (`draft`, `published`), `topic` · pesquisa: `?search=`.
+
+Escrita (`POST`/`PATCH`): `{ "title", "summary"?, "body", "topic", "status"?, "cover_image_url"? }`. `title`, `body` e `topic` são obrigatórios na criação; o `slug` é gerado a partir do título e **não muda** depois. Passar `status: "published"` define `published_at` na primeira publicação. Resposta: `id, title, slug, summary, body, topic, status, cover_image_url, published_at, is_active, created_at, updated_at`.
+
+## 9. Ocorrências de documentos perdidos (privado)
+
+Criadas por utilizadores do perfil `esquadra` e consultadas por `entidade` (ou `esquadra`). Todos exigem `Authorization: Bearer <access>`.
+
+| Rota | Permissão | Descrição |
+|---|---|---|
+| `GET occurrences/` | `occurrence:read` | listagem paginada |
+| `POST occurrences/` | `occurrence:create` | criar ocorrência |
+| `GET occurrences/{id}/` | `occurrence:read` | detalhe |
+| `PATCH occurrences/{id}/` | `occurrence:update` | actualizar / fechar |
+
+Não há `DELETE` (as ocorrências ficam como registo). Filtros exactos: `status` (`open`, `found`, `closed`), `document_type` (`bi`, `passport`, `driving_license`, `dire`, `other`), `document_number`, `station_name`, `reference` · pesquisa: `?search=` (referência, nº do documento, nome do titular). Para uma entidade encontrar um documento, use `?document_number=…` (exacto, em maiúsculas).
+
+Criar (`POST`):
+```json
+{
+  "document_type": "bi",
+  "document_number": "1100123456A",
+  "owner_name": "Ana Macuácua",
+  "owner_contact": "84 111 2222",
+  "lost_at": "2026-09-30",
+  "location": "Mercado Central",
+  "description": "Perdido num táxi",
+  "station_name": "Esquadra da Polícia Nº 1"
+}
+```
+Obrigatórios: `document_type`, `document_number`, `owner_name`, `lost_at`, `location`, `station_name`. `document_number` é guardado em maiúsculas e sem espaços nas pontas. `lost_at` (AAAA-MM-DD) não pode ser futura. Uma ocorrência nova começa sempre `open` (enviar outro `status` → 400).
+
+Resposta (`201` e leituras):
+```json
+{
+  "id": "uuid", "reference": "OC-2026-000001", "document_type": "bi", "document_number": "1100123456A",
+  "owner_name": "Ana Macuácua", "owner_contact": "84 111 2222", "lost_at": "2026-09-30",
+  "location": "Mercado Central", "description": "Perdido num táxi", "status": "open",
+  "station_name": "Esquadra da Polícia Nº 1", "registered_by": "Agente Silva",
+  "closed_at": null, "created_at": "…", "updated_at": "…"
+}
+```
+`reference` é gerada pela API, sequencial por ano, e **imutável**. `PATCH` aceita os mesmos campos; `status: "closed"` preenche `closed_at` e voltar a `open`/`found` limpa-o. São dados pessoais: mostrar só a utilizadores autenticados com permissão e não os registar em logs do cliente.

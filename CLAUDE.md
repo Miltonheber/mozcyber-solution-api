@@ -33,10 +33,10 @@ apps/
   user/            User (login por email), Profile, Permission, auth JWT, CRUD
   audit_log/       ActionLog genérico + LogService + LoggingMixin
   reputation/      PhoneNumber (blacklist/reputação), MessageClassification (histórico da IA), NumberReport (denúncias/burlas)
-  education/       Post (conteúdo educativo; público só `published`)
-  occurrences/     LostDocumentOccurrence (documentos perdidos; criada por perfil `esquadra`, lida por `entidade`)
+  education/       Post (conteúdo educativo; leitura pública só `published`, CRUD com `education:*`)
+  occurrences/     LostDocumentOccurrence (documentos perdidos; criada por perfil `esquadra`, lida por `entidade`; sem DELETE)
 ```
-**Domínio:** zona **pública** (classificar, denunciar, ler posts) vs **privada** (publicar posts, ocorrências, moderação). Registos criados por anónimos têm `created_by = null`. Números sempre normalizados com `normalize_phone` ([apps/core/utils.py](apps/core/utils.py)) antes de gravar/consultar. Esquadras/entidades são apenas Profiles (`esquadra`, `entidade`, criados por `seed_access`; `station_name` na ocorrência identifica a esquadra). Fase 1 (reputation) implementada; `education` e `occurrences` só têm modelos.
+**Domínio:** zona **pública** (classificar, denunciar, ler posts) vs **privada** (publicar posts, ocorrências, moderação). Registos criados por anónimos têm `created_by = null`. Números sempre normalizados com `normalize_phone` ([apps/core/utils.py](apps/core/utils.py)) antes de gravar/consultar. Esquadras/entidades são apenas Profiles (`esquadra`, `entidade`, criados por `seed_access`; `station_name` na ocorrência identifica a esquadra). Implementadas: `reputation`, `education` e `occurrences`. Rotas públicas: `public/posts/` (+ `<slug>/`); privadas: `posts/`, `occurrences/`. Dados pessoais de ocorrências/denúncias são mascarados no `ActionLog` (`SENSITIVE_KEYS`). A referência da ocorrência é gerada no model e o repository repete a criação se houver colisão.
 **Cada app tem obrigatoriamente** as camadas: `models`, `repositories/`, `services/`, `serializers/`, `views/`, `urls` (módulo ou pacote), `utils/`, `tests/`.
 
 ## 4. Arquitectura em camadas (regra de ouro)

@@ -11,4 +11,7 @@ urlpatterns = [
     path("public/", include("apps.reputation.urls.public")),
     path("blacklist/", include("apps.reputation.urls.blacklist")),
     path("reports/", include("apps.reputation.urls.reports")),
+    path("public/", include("apps.education.urls.public")),
+    path("posts/", include("apps.education.urls.posts")),
+    path("occurrences/", include("apps.occurrences.urls")),
 ]

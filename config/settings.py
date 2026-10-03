@@ -132,6 +132,8 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "NumberStatusEnum": "apps.reputation.constants.NumberStatus.choices",
         "ReportStatusEnum": "apps.reputation.constants.ReportStatus.choices",
+        "PostStatusEnum": "apps.education.constants.PostStatus.choices",
+        "OccurrenceStatusEnum": "apps.occurrences.constants.OccurrenceStatus.choices",
     },
 }
 

@@ -31,3 +31,13 @@ def test_normalize_phone(raw, expected):
 def test_normalize_phone_invalid(raw):
     with pytest.raises(ValueError):
         normalize_phone(raw)
+
+
+def test_redact_masks_personal_data_fields():
+    data = {"document_number": "123", "owner_contact": "84", "reporter_contact": "x", "owner_name": "Ana"}
+    assert redact(data) == {
+        "document_number": "***",
+        "owner_contact": "***",
+        "reporter_contact": "***",
+        "owner_name": "Ana",
+    }
