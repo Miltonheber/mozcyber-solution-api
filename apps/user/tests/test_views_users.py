@@ -35,7 +35,9 @@ def test_list_has_constant_queries_no_n_plus_1(auth_client, django_assert_max_nu
     client = auth_client(["user:read"])
     with django_assert_max_num_queries(6):  # auth, count, users, profiles prefetch (+ margem)
         response = client.get(list_url(), {"size": 20})
-    assert response.status_code == 200 and len(response.data["results"][0]["profiles"]) in (0, 3)
+    assert response.status_code == 200
+    # 10 utilizadores com 3 perfis + o utilizador autenticado (1 perfil de teste), em qualquer ordem
+    assert {len(r["profiles"]) for r in response.data["results"]} == {1, 3}
 
 
 def test_search_filter(auth_client):

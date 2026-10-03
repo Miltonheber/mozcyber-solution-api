@@ -45,3 +45,21 @@ def clear_throttle_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.fixture
+def staff_client(db, settings):
+    """Django `Client` com sessão de um superutilizador (para o admin). O utilizador fica em `client.user`.
+    Usa o storage de estáticos simples: o do WhiteNoise (manifesto) exige `collectstatic`."""
+    from django.test import Client
+
+    settings.STORAGES = {
+        **settings.STORAGES,
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+
+    staff = UserFactory(is_staff=True, is_superuser=True)
+    client = Client()
+    client.force_login(staff)
+    client.user = staff
+    return client

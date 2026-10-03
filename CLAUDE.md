@@ -101,6 +101,11 @@ apps/
 - Segredos (`password`, `token`, `access`, `refresh`…) são mascarados por `redact` ([apps/core/utils.py](apps/core/utils.py)); acrescentar chaves em `SENSITIVE_KEYS` se necessário.
 - Consulta: `GET /api/v1/logs/` (permissão `log:read`; filtros `user_id, action, resource_type, resource_id, method, status_code, search`).
 
+## Admin do Django (`/admin/`)
+- Todos os modelos de negócio têm admin (`apps/<app>/admin.py`), herdando `AuditedAdmin` (preenche `created_by`/`updated_by`, auditoria só de leitura) ou `ReadOnlyAdmin` (logs e análises: só consulta). Novo modelo ⇒ registar no admin; `test_every_project_model_is_registered` falha se faltar.
+- O admin **não contorna as regras**: estado dos números só muda por acções que chamam `PhoneNumberService`; denúncias e ocorrências recalculam reputação/`closed_at` ao mudar de estado. Quem entra tem de ser `is_staff` (`createsuperuser` cria um).
+- Testes do admin: fixture `staff_client` (usa storage de estáticos simples; o do WhiteNoise exige `collectstatic`).
+
 ## 10. Testes (cada funcionalidade/endpoint nasce com testes)
 - Cada app: `tests/test_services.py`, `test_repositories.py`, `test_views*.py`, `test_utils.py` + `factories.py` (factory-boy).
 - Fixtures globais ([apps/core/testing/fixtures.py](apps/core/testing/fixtures.py), carregadas pelo [conftest.py](conftest.py)): `api_client`, `user`, e **`auth_client(["perm:a", ...])`** → `APIClient` com JWT real e essas permissões (`client.user` é o utilizador). Hash de password rápido é automático.
