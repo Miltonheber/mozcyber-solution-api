@@ -64,3 +64,12 @@ def test_clearing_number_resets_it():
     assert (cleared.status, cleared.risk_score, cleared.report_count) == ("cleared", 0, 0)
     assert cleared.blacklisted_at is None
     assert phone.reports.exclude(status="rejected").count() == 0
+
+
+def test_public_hall_of_fame_service_delegates_to_repository_without_db():
+    from apps.reputation.services import PublicHallOfFameService
+
+    repo = MagicMock()
+    result = PublicHallOfFameService(repository=repo, reports=MagicMock()).list({"category": "phishing"})
+    repo.list_hall_of_fame.assert_called_once_with({"category": "phishing"})
+    assert result is repo.list_hall_of_fame.return_value

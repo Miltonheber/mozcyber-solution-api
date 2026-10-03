@@ -142,6 +142,17 @@ Detalhe por `slug`: os mesmos campos + `body` (texto completo; texto simples com
 
 ---
 
+### 2.5 Hall da fama (ranking de números)
+`GET /api/v1/public/hall-of-fame/` · throttle 60/min · sem login
+
+Números em **blacklist**, do maior risco para o menor (`risk_score`, depois `report_count`). Paginado (`?page`, `?size`) e filtro opcional `?category=` (`phishing`, `sim_swap`, `fake_prize`, `impersonation`, `loan_scam`, `other`). `?search=` é ignorado. Um número limpo pela moderação (`cleared`) sai do ranking. Os números vêm **completos** (E.164).
+```json
+{ "count": 1, "next": null, "previous": null, "results": [
+  { "number": "+258841234567", "status": "blacklisted", "category": "phishing", "risk_score": 100, "report_count": 5, "blacklisted_at": "2026-10-03T10:00:00Z" } ] }
+```
+
+---
+
 ## 3. Autenticação (zona privada)
 
 | Rota | Corpo | Resposta |

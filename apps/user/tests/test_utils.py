@@ -61,3 +61,23 @@ def test_seed_access_creates_operational_profiles():
         "occurrence:update",
     }
     assert set(entity.permissions.values_list("code", flat=True)) == {"occurrence:read"}
+
+
+def test_seed_access_creates_editor_and_moderator_profiles():
+    from apps.user.models import Profile
+
+    seed_access()
+    editor = Profile.objects.get(code="editor")
+    moderator = Profile.objects.get(code="moderador")
+    assert set(editor.permissions.values_list("code", flat=True)) == {
+        "education:read",
+        "education:create",
+        "education:update",
+        "education:delete",
+    }
+    assert set(moderator.permissions.values_list("code", flat=True)) == {
+        "blacklist:read",
+        "blacklist:update",
+        "report:read",
+        "report:update",
+    }

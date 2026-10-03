@@ -76,3 +76,72 @@ def test_public_endpoints_are_throttled(api_client, monkeypatch):
     assert api_client.post(url("public-classify"), body, format="json").status_code == 200
     assert api_client.post(url("public-classify"), body, format="json").status_code == 200
     assert_error(api_client.post(url("public-classify"), body, format="json"), 429, "throttled")
+
+
+def _blacklisted(number, score, reports=0, category="phishing"):
+    from apps.reputation.tests.factories import PhoneNumberFactory
+
+    return PhoneNumberFactory(
+        number=number, status="blacklisted", risk_score=score, report_count=reports, category=category
+    )
+
+
+def test_hall_of_fame_is_public_blacklisted_only_and_ordered(api_client):
+    from apps.reputation.tests.factories import PhoneNumberFactory
+
+    _blacklisted("+258840000001", 80, reports=3)
+    _blacklisted("+258840000002", 100, reports=1)
+    _blacklisted("+258840000003", 80, reports=5)
+    PhoneNumberFactory(number="+258840000004", status="suspicious", risk_score=99)
+    PhoneNumberFactory(number="+258840000005", status="cleared", risk_score=0)
+
+    response = api_client.get(url("public-hall-of-fame"))
+    assert response.status_code == 200
+    assert [n["number"] for n in response.data["results"]] == [
+        "+258840000002",
+        "+258840000003",
+        "+258840000001",
+    ]
+    assert set(response.data["results"][0]) == {
+        "number",
+        "status",
+        "category",
+        "risk_score",
+        "report_count",
+        "blacklisted_at",
+    }
+
+
+def test_hall_of_fame_filters_by_category_ignores_search_and_paginates(api_client):
+    _blacklisted("+258840000001", 90, category="phishing")
+    _blacklisted("+258840000002", 80, category="sim_swap")
+    _blacklisted("+258840000003", 70, category="sim_swap")
+
+    sim = api_client.get(url("public-hall-of-fame"), {"category": "sim_swap"})
+    assert sim.data["count"] == 2
+    assert api_client.get(url("public-hall-of-fame"), {"search": "nada"}).data["count"] == 3
+    page = api_client.get(url("public-hall-of-fame"), {"size": 2})
+    assert len(page.data["results"]) == 2 and page.data["next"]
+
+
+def test_hall_of_fame_drops_cleared_numbers(auth_client, api_client):
+    phone = _blacklisted("+258840000001", 90)
+    auth_client(["blacklist:update"]).patch(
+        reverse("blacklist-detail", kwargs={"version": "v1", "pk": phone.pk}),
+        {"status": "cleared"},
+        format="json",
+    )
+    assert api_client.get(url("public-hall-of-fame")).data["count"] == 0
+
+
+def test_hall_of_fame_has_constant_queries(api_client, django_assert_max_num_queries):
+    for i in range(8):
+        _blacklisted(f"+25884100000{i}", 50 + i, reports=i)
+    with django_assert_max_num_queries(3):
+        assert api_client.get(url("public-hall-of-fame")).data["count"] == 8
+
+
+def test_hall_of_fame_is_throttled(api_client, monkeypatch):
+    monkeypatch.setitem(ScopedRateThrottle.THROTTLE_RATES, "public_read", "1/min")
+    assert api_client.get(url("public-hall-of-fame")).status_code == 200
+    assert_error(api_client.get(url("public-hall-of-fame")), 429, "throttled")

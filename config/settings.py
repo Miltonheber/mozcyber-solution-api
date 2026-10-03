@@ -11,6 +11,9 @@ env = environ.Env(
     ACCESS_TOKEN_MINUTES=(int, 30),
     REFRESH_TOKEN_DAYS=(int, 7),
     MESSAGE_CLASSIFIER=(str, "apps.reputation.services.classifier.RuleBasedClassifier"),
+    GEMINI_API_KEY=(str, ""),
+    GEMINI_MODEL=(str, "gemini-2.5-flash"),
+    GEMINI_TIMEOUT_SECONDS=(float, 8.0),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -139,3 +142,6 @@ SPECTACULAR_SETTINGS = {
 
 # Classificador de mensagens (caminho do módulo da classe). Trocar por um provider de IA sem tocar nos services.
 MESSAGE_CLASSIFIER = env("MESSAGE_CLASSIFIER")
+GEMINI_API_KEY = env("GEMINI_API_KEY")
+GEMINI_MODEL = env("GEMINI_MODEL")
+GEMINI_TIMEOUT_SECONDS = env("GEMINI_TIMEOUT_SECONDS")

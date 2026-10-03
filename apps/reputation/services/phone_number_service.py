@@ -45,3 +45,10 @@ class PhoneNumberService(BaseService):
         elif data.get("status") == NumberStatus.BLACKLISTED and instance.blacklisted_at is None:
             data = {**data, "blacklisted_at": timezone.now()}
         return super().update(instance, data, actor=actor)
+
+
+class PublicHallOfFameService(PhoneNumberService):
+    """Leitura pública do ranking: só números em blacklist."""
+
+    def list(self, params=None):
+        return self.repository.list_hall_of_fame(params)

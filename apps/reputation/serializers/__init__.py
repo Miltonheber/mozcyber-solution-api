@@ -2,6 +2,7 @@ from .classification import ClassifyRequestSerializer, ClassifyResponseSerialize
 from .phone_number import (
     PhoneNumberModerationSerializer,
     PhoneNumberReadSerializer,
+    PublicHallOfFameSerializer,
     PublicReputationSerializer,
 )
 from .report import (
@@ -19,6 +20,7 @@ __all__ = [
     "PhoneNumberModerationSerializer",
     "PhoneNumberReadSerializer",
     "PublicReportCreateSerializer",
+    "PublicHallOfFameSerializer",
     "PublicReportReadSerializer",
     "PublicReputationSerializer",
 ]

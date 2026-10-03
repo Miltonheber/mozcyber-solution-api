@@ -31,9 +31,19 @@ PERMISSION_CATALOG = {
 ADMIN_PROFILE_CODE = "admin"
 POLICE_PROFILE_CODE = "esquadra"
 ENTITY_PROFILE_CODE = "entidade"
+EDITOR_PROFILE_CODE = "editor"
+MODERATOR_PROFILE_CODE = "moderador"
 
 # Perfis operacionais criados pelo seed (o admin recebe sempre todas as permissões).
 SEED_PROFILES = {
     POLICE_PROFILE_CODE: ("Esquadra", ["occurrence:create", "occurrence:read", "occurrence:update"]),
     ENTITY_PROFILE_CODE: ("Entidade interessada", ["occurrence:read"]),
+    EDITOR_PROFILE_CODE: (
+        "Editor de conteúdo",
+        ["education:read", "education:create", "education:update", "education:delete"],
+    ),
+    MODERATOR_PROFILE_CODE: (
+        "Moderador",
+        ["blacklist:read", "blacklist:update", "report:read", "report:update"],
+    ),
 }

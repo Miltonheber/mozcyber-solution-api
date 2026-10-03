@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -6,15 +6,22 @@ from apps.audit_log.mixins import LoggingMixin
 from apps.audit_log.utils.request import get_client_ip
 from apps.core.exceptions import ValidationException
 from apps.core.utils import normalize_phone
-from apps.core.views import PublicAPIView
+from apps.core.views import ListMixin, PublicAPIView
+from apps.reputation.constants import Category
 from apps.reputation.serializers import (
     ClassifyRequestSerializer,
     ClassifyResponseSerializer,
+    PublicHallOfFameSerializer,
     PublicReportCreateSerializer,
     PublicReportReadSerializer,
     PublicReputationSerializer,
 )
-from apps.reputation.services import ClassificationService, PhoneNumberService, ReportService
+from apps.reputation.services import (
+    ClassificationService,
+    PhoneNumberService,
+    PublicHallOfFameService,
+    ReportService,
+)
 
 
 class PublicClassifyView(LoggingMixin, PublicAPIView):
@@ -68,3 +75,15 @@ class PublicNumberReputationView(PublicAPIView):
         except ValueError as exc:
             raise ValidationException(str(exc)) from None
         return Response(PublicReputationSerializer(self.service.reputation(number)).data)
+
+
+class PublicHallOfFameView(ListMixin, PublicAPIView):
+    """Ranking público dos números em blacklist (maior risco primeiro)."""
+
+    throttle_scope = "public_read"
+    service_class = PublicHallOfFameService
+    read_serializer_class = PublicHallOfFameSerializer
+
+    @extend_schema(parameters=[OpenApiParameter("category", enum=Category.values, required=False)])
+    def get(self, request, *args, **kwargs):
+        return self.list(request)

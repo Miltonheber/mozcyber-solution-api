@@ -24,6 +24,14 @@ class PublicReputationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class PublicHallOfFameSerializer(PublicReputationSerializer):
+    """Item do ranking público: reputação mínima + data de entrada na blacklist."""
+
+    class Meta(PublicReputationSerializer.Meta):
+        fields = (*PublicReputationSerializer.Meta.fields, "blacklisted_at")
+        read_only_fields = fields
+
+
 class PhoneNumberReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = PhoneNumber

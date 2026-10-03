@@ -4,7 +4,7 @@ from apps.user.utils.seed import seed_access
 
 
 class Command(BaseCommand):
-    help = "Cria as permissões do catálogo e o perfil admin."
+    help = "Cria as permissões do catálogo, o perfil admin e os perfis operacionais."
 
     def handle(self, *args, **options):
         admin = seed_access()
