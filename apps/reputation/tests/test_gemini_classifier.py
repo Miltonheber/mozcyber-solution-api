@@ -116,3 +116,50 @@ def test_fallback_without_api_key(settings):
     result = FallbackClassifier().classify(NUMBER, "olá, tudo bem?")
     assert result.provider == "rule_based"
     assert "GEMINI_API_KEY" in result.raw["fallback_reason"]
+
+
+class _ApiError(Exception):
+    def __init__(self, code):
+        super().__init__(f"{code} erro")
+        self.code = code
+
+
+def _ok_response():
+    response = MagicMock()
+    response.text = json.dumps(
+        {"verdict": "suspicious", "category": "other", "confidence": 0.6, "explanation": "x"}
+    )
+    return response
+
+
+@pytest.fixture
+def no_sleep(monkeypatch):
+    monkeypatch.setattr("apps.reputation.services.gemini_classifier.time.sleep", lambda s: None)
+
+
+def test_transient_error_is_retried_once(no_sleep):
+    client = MagicMock()
+    client.models.generate_content.side_effect = [_ApiError(503), _ok_response()]
+    result = GeminiClassifier(client=client, model="m").classify(NUMBER, "x")
+    assert result.provider == "gemini" and result.verdict == Verdict.SUSPICIOUS
+    assert client.models.generate_content.call_count == 2
+
+
+def test_gives_up_after_max_attempts(no_sleep):
+    client = MagicMock()
+    client.models.generate_content.side_effect = _ApiError(503)
+    with pytest.raises(GeminiError):
+        GeminiClassifier(client=client, model="m").classify(NUMBER, "x")
+    assert client.models.generate_content.call_count == 2
+
+
+def test_non_transient_error_is_not_retried(no_sleep):
+    client = MagicMock()
+    client.models.generate_content.side_effect = _ApiError(400)
+    with pytest.raises(GeminiError):
+        GeminiClassifier(client=client, model="m").classify(NUMBER, "x")
+    assert client.models.generate_content.call_count == 1
+
+
+def test_prompt_covers_payment_redirect_pattern():
+    assert "em nome de" in SYSTEM_INSTRUCTION and "suspicious" in SYSTEM_INSTRUCTION

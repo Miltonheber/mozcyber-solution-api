@@ -89,6 +89,7 @@ apps/
 - Herdam `PublicAPIView` ([apps/core/views.py](apps/core/views.py)): sem JWT, `AllowAny`, `ScopedRateThrottle`. **Obrigatório** `throttle_scope` (taxas em `DEFAULT_THROTTLE_RATES`: `public_classify`, `public_report`, `public_read`). A cache de throttling é por processo (LocMem) — com vários workers o limite efectivo multiplica; para limite global usar Redis/DB cache.
 - Views públicas usam `@extend_schema` e serializers **reduzidos** (nunca expor IP/contacto do denunciante). Os mixins CRUD usam `self.get_actor(request)` (`None` para anónimos).
 - Rotas públicas em `/api/v1/public/…` (`classify/`, `reports/`, `numbers/<phone>/`, `hall-of-fame/`: ranking de números em blacklist, **expostos completos** por decisão de produto; `cleared` pela moderação tira-os do ranking); moderação autenticada em `blacklist/` e `reports/`.
+- Logging: `LOGGING` em settings envia para a consola; loggers `apps.*` a `LOG_LEVEL` (default INFO), resto WARNING. Ver chamadas ao Gemini nos logs do `runserver` ou `docker compose logs -f web`. Os testes forçam sempre o classificador por regras (fixture autouse `rule_based_classifier`), nunca chamam a rede.
 - Classificação: `settings.MESSAGE_CLASSIFIER` (env) aponta para a classe que implementa `MessageClassifier` ([apps/reputation/services/classifier.py](apps/reputation/services/classifier.py)); default `RuleBasedClassifier`; com `apps.reputation.services.gemini_classifier.FallbackClassifier` usa o Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TIMEOUT_SECONDS`; prompt em `SYSTEM_INSTRUCTION`) e cai nas regras locais se não houver chave ou se falhar (`provider` indica quem classificou). Reputação (score/blacklist) em [apps/reputation/utils/scoring.py](apps/reputation/utils/scoring.py); contadores sempre recontados dos registos.
 
 ## 8. BaseModel
@@ -135,4 +136,4 @@ apps/
 `django-cors-headers` com `CORS_ALLOW_ALL_ORIGINS = True` (todas as origens), `CorsMiddleware` logo após o WhiteNoise. Seguro aqui porque a auth é por header `Authorization: Bearer` (sem cookies/credenciais). Para restringir: trocar por `CORS_ALLOWED_ORIGINS`.
 
 ## 14. Variáveis de ambiente
-`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `DB_NAME/USER/PASSWORD/ROOT_PASSWORD`, `DB_PORT`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `MESSAGE_CLASSIFIER`, `GEMINI_API_KEY/MODEL/TIMEOUT_SECONDS`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).
+`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `DB_NAME/USER/PASSWORD/ROOT_PASSWORD`, `DB_PORT`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `MESSAGE_CLASSIFIER`, `GEMINI_API_KEY/MODEL/TIMEOUT_SECONDS`, `LOG_LEVEL`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).

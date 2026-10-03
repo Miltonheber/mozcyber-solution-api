@@ -29,3 +29,23 @@ def test_rule_based_flags_fraud_and_safe():
     assert fraud.verdict == "fraud" and fraud.confidence >= 0.8 and fraud.category
     safe = clf.classify("+258841234567", "Olá, vamos almoçar amanhã?")
     assert safe.verdict == "safe" and safe.category is None and safe.confidence == 0
+
+
+PAYMENT_REDIRECT = (
+    "O Dinheiro Podes Mandar Nesta Conta Na E-mola 871937243 Vem Em Nome De Tomas Augusto Moises "
+    "Ou 840713788 Sai Nome De Adelina Mateus Zacarias"
+)
+
+
+def test_rule_based_flags_payment_redirect_to_third_party_accounts():
+    result = RuleBasedClassifier().classify("+258841234567", PAYMENT_REDIRECT)
+    assert result.verdict == "suspicious" and result.category is not None
+    assert any("conta" in r for r in result.raw["reasons"])
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Bom dia, vamos almoçar amanhã?", "A sua reunião é às 10h na sala 2.", "Obrigado pela ajuda ontem."],
+)
+def test_rule_based_payment_rules_do_not_flag_normal_chat(text):
+    assert RuleBasedClassifier().classify("+258841234567", text).verdict == "safe"

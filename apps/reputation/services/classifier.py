@@ -67,6 +67,25 @@ _RULES = (
         0.25,
         "linguagem de urgência/ameaça",
     ),
+    # Pedido de pagamento para contas indicadas na mensagem (vários números / titulares de terceiros).
+    (
+        Category.OTHER,
+        r"(mand|envi|transfer|deposit)\w*.{0,60}(conta|e-?mola|m-?pesa|m-?kesh|mpesa)",
+        0.25,
+        "pede dinheiro para uma conta indicada na mensagem",
+    ),
+    (
+        Category.IMPERSONATION,
+        r"em nome d[aeo]|sai nome|vem em nome",
+        0.1,
+        "indica contas em nome de terceiros",
+    ),
+    (
+        Category.OTHER,
+        r"(?s)\b8[2-7]\d{7}\b.{0,200}\b8[2-7]\d{7}\b",
+        0.1,
+        "indica vários números de conta",
+    ),
 )
 
 

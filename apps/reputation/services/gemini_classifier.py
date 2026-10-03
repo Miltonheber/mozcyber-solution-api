@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from django.conf import settings
 
@@ -9,6 +10,11 @@ from apps.reputation.services.classifier import ClassificationResult, RuleBasedC
 logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_CHARS = 2000
+
+# Erros temporários do Gemini (quota, sobrecarga): tenta-se mais uma vez antes de cair nas regras locais.
+TRANSIENT_CODES = {429, 500, 503, 504}
+MAX_ATTEMPTS = 2
+RETRY_DELAY_SECONDS = 0.5
 
 SYSTEM_INSTRUCTION = """\
 És um analista de segurança que detecta burlas por SMS, chamadas e mensagens em Moçambique.
@@ -24,6 +30,14 @@ Tipos de fraude (campo "category"):
 - loan_scam: falso empréstimo/crédito que exige pagamento antecipado (taxa, seguro, depósito).
 - other: engenharia social ou fraude que não cabe nas anteriores
   (urgência, ameaça de bloqueio de conta, chantagem, falsa oferta de emprego).
+
+Pedidos de pagamento (muito comum, não os classifiques como "safe"):
+- Mensagem a pedir para enviar, transferir ou depositar dinheiro para uma conta de e-Mola, M-Pesa, mKesh ou banco
+  indicada na própria mensagem, sobretudo com vários números, nomes de terceiros ("em nome de…", "sai nome de…")
+  ou sem contexto verificável, é no mínimo "suspicious" (categoria "impersonation" ou "other").
+- Passa a "fraud" se houver também urgência, prémio, emprego, empréstimo, pedido de adiantamento
+  ou conta/titular que não corresponde a quem diz ser.
+- Só é "safe" se o contexto for claramente legítimo (ex.: confirmação de um pagamento já feito pelo próprio utilizador).
 
 Veredicto (campo "verdict"):
 - safe: mensagem legítima ou sem sinais de fraude (notificações normais, conversa pessoal, publicidade clara).
@@ -78,25 +92,36 @@ class GeminiClassifier:
         return self._client
 
     def classify(self, number: str, message: str) -> ClassificationResult:
-        from google.genai import types
-
         logger.info("A classificar com o Gemini (modelo=%s)", self.model)
         prompt = f"Número remetente: {number}\n<mensagem>\n{message[:MAX_MESSAGE_CHARS]}\n</mensagem>"
         try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    response_mime_type="application/json",
-                    response_schema=RESPONSE_SCHEMA,
-                    temperature=0,
-                ),
-            )
+            response = self._generate(prompt)
             data = json.loads(response.text)
         except Exception as exc:  # rede, quota, timeout, resposta vazia/inválida…
             raise GeminiError(f"{type(exc).__name__}: {exc}") from exc
         return self._to_result(data)
+
+    def _generate(self, prompt: str):
+        """Chama o Gemini, repetindo em erros temporários (429/500/503/504) até `MAX_ATTEMPTS`."""
+        from google.genai import types
+
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+            response_mime_type="application/json",
+            response_schema=RESPONSE_SCHEMA,
+            temperature=0,
+        )
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                return self.client.models.generate_content(model=self.model, contents=prompt, config=config)
+            except Exception as exc:
+                code = getattr(exc, "code", None)
+                if attempt == MAX_ATTEMPTS or code not in TRANSIENT_CODES:
+                    raise
+                logger.warning(
+                    "Gemini indisponível (%s), nova tentativa %d/%d", code, attempt + 1, MAX_ATTEMPTS
+                )
+                time.sleep(RETRY_DELAY_SECONDS)
 
     def _to_result(self, data) -> ClassificationResult:
         if not isinstance(data, dict):

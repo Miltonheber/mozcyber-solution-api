@@ -63,3 +63,10 @@ def staff_client(db, settings):
     client.force_login(staff)
     client.user = staff
     return client
+
+
+@pytest.fixture(autouse=True)
+def rule_based_classifier(settings):
+    """Os testes nunca chamam o Gemini (rede/custo), mesmo que o `.env` o active."""
+    settings.MESSAGE_CLASSIFIER = "apps.reputation.services.classifier.RuleBasedClassifier"
+    settings.GEMINI_API_KEY = ""

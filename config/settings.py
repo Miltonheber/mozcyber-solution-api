@@ -11,9 +11,10 @@ env = environ.Env(
     ACCESS_TOKEN_MINUTES=(int, 30),
     REFRESH_TOKEN_DAYS=(int, 7),
     MESSAGE_CLASSIFIER=(str, "apps.reputation.services.classifier.RuleBasedClassifier"),
+    LOG_LEVEL=(str, "INFO"),
     GEMINI_API_KEY=(str, ""),
-    GEMINI_MODEL=(str, "gemini-2.5-flash"),
-    GEMINI_TIMEOUT_SECONDS=(float, 8.0),
+    GEMINI_MODEL=(str, "gemini-3.8-flash"),
+    GEMINI_TIMEOUT_SECONDS=(float, 15.0),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -145,3 +146,15 @@ MESSAGE_CLASSIFIER = env("MESSAGE_CLASSIFIER")
 GEMINI_API_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL")
 GEMINI_TIMEOUT_SECONDS = env("GEMINI_TIMEOUT_SECONDS")
+
+# Logging: consola (stdout/stderr do container). O código da app (`apps.*`) regista a LOG_LEVEL (default INFO);
+# o resto fica em WARNING. Sem isto os `logger.info` (ex.: chamadas ao Gemini) são descartados.
+LOG_LEVEL = env("LOG_LEVEL")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"standard": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "standard"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {"apps": {"level": LOG_LEVEL, "propagate": True}},
+}
