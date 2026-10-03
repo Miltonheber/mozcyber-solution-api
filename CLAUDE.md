@@ -3,7 +3,7 @@
 Documento orientador para qualquer dev ou IA que continue este projecto. **Leia antes de escrever código e mantenha-o actualizado.**
 
 ## 1. Stack
-Python 3.12 · Django 5.1 · Django REST Framework (**`APIView`**, sem ViewSets/generics) · `djangorestframework-simplejwt` · `drf-spectacular` (Swagger) · PostgreSQL (SQLite como fallback local) · `gunicorn` · `whitenoise` · `django-environ` · gestão de dependências com **`uv`** · shell com `ipython` (dev), testes com `pytest` + `pytest-django` + `factory-boy` · lint/format com `ruff`.
+Python 3.12 · Django 5.1 · Django REST Framework (**`APIView`**, sem ViewSets/generics) · `djangorestframework-simplejwt` · `drf-spectacular` (Swagger) · MySQL 8.4 via `mysqlclient` (SQLite como fallback local) · `gunicorn` · `whitenoise` · `django-environ` · gestão de dependências com **`uv`** · shell com `ipython` (dev), testes com `pytest` + `pytest-django` + `factory-boy` · lint/format com `ruff`.
 
 ## 2. Comandos
 ```bash
@@ -19,9 +19,9 @@ uv run ruff check --fix . && uv run ruff format .
 uv run python manage.py spectacular --validate --fail-on-warn   # valida o OpenAPI
 
 docker compose exec web python manage.py shell   # IPython dentro do container
-docker compose up --build                 # db (postgres) + web (gunicorn); porta via WEB_PORT (default 8000)
+docker compose up --build                 # db (mysql) + web (gunicorn); porta via WEB_PORT (default 8000)
 ```
-Config por `.env` (copiar de `.env.example`). Sem `DATABASE_URL` usa `db.sqlite3`; o compose injecta o URL do Postgres.
+Config por `.env` (copiar de `.env.example`). Sem `DATABASE_URL` usa `db.sqlite3`; o compose injecta o URL do MySQL. **SQLite local e MySQL do Docker são bases diferentes**; para partilhar, subir `db` e pôr `DATABASE_URL=mysql://mozcyber:mozcyber@127.0.0.1:3307/mozcyber` no `.env`.
 Swagger: `/api/docs/` · schema: `/api/schema/`. O container corre `migrate` + `seed_access` no arranque ([docker-entrypoint.sh](docker-entrypoint.sh)).
 
 ## 3. Estrutura
@@ -111,8 +111,8 @@ apps/
 9. Actualizar este ficheiro se mudar alguma regra.
 
 ## 12. Docker
-- [Dockerfile](Dockerfile): multi-stage, `python:3.12-slim`; stage `build` instala deps com `uv sync --frozen --no-dev` e corre `collectstatic`; stage final só leva `/app` (+ venv), corre como utilizador não-root com **gunicorn** (`config.wsgi`, 3 workers).
-- [docker-compose.yml](docker-compose.yml): `db` (postgres:16-alpine, healthcheck, volume `pgdata`) e `web` (espera o db saudável; `DATABASE_URL` montado a partir de `POSTGRES_*`). Porta do host: `WEB_PORT`.
+- [Dockerfile](Dockerfile): multi-stage, `python:3.12-slim`; stage `build` instala `gcc`/headers MySQL (para compilar `mysqlclient`) e deps com `uv sync --frozen --no-dev` e corre `collectstatic`; stage final só leva `/app` (+ venv) e `libmariadb3`, corre como utilizador não-root com **gunicorn** (`config.wsgi`, 3 workers).
+- [docker-compose.yml](docker-compose.yml): `db` (mysql:8.4, utf8mb4, healthcheck, volume `mysqldata`, porta do host `DB_PORT`=3307) e `web` (espera o db saudável; `DATABASE_URL` montado a partir de `DB_*`). Porta do host: `WEB_PORT`. `down -v` apaga os dados.
 - Estáticos: **WhiteNoise** logo a seguir ao `SecurityMiddleware`, `CompressedManifestStaticFilesStorage`, `STATIC_ROOT=staticfiles/`. Em produção definir `SECRET_KEY` forte, `DEBUG=False`, `ALLOWED_HOSTS`.
 - `INSTALL_DEV` (build arg, default `false` no Dockerfile, `true` no compose) inclui o grupo `dev` (ipython, pytest) na imagem; em produção usar `INSTALL_DEV=false`. Dependências novas: `uv add ...` e fazer commit do `uv.lock` (o build usa `--frozen`).
 
@@ -120,4 +120,4 @@ apps/
 `django-cors-headers` com `CORS_ALLOW_ALL_ORIGINS = True` (todas as origens), `CorsMiddleware` logo após o WhiteNoise. Seguro aqui porque a auth é por header `Authorization: Bearer` (sem cookies/credenciais). Para restringir: trocar por `CORS_ALLOWED_ORIGINS`.
 
 ## 14. Variáveis de ambiente
-`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `POSTGRES_DB/USER/PASSWORD`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).
+`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `DB_NAME/USER/PASSWORD/ROOT_PASSWORD`, `DB_PORT`, `ACCESS_TOKEN_MINUTES`, `REFRESH_TOKEN_DAYS`, `WEB_PORT`, `INSTALL_DEV` (ver [.env.example](.env.example)).

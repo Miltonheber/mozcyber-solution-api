@@ -13,11 +13,11 @@ API em Django REST Framework, organizada em camadas, com login por email, JWT co
 - **Auditoria genérica** (`audit_log`): guarda ação, utilizador, IP, user-agent, método, payload (sem segredos) e mais, para qualquer app.
 - **API paginada** (`?page=&size=`), **versionada** (`/api/v1/`) e documentada com **Swagger**.
 - **Erros uniformes**: `{"code", "message", "details"}`.
-- **Docker**: Postgres, gunicorn e WhiteNoise.
+- **Docker**: MySQL (com volume), gunicorn e WhiteNoise.
 
 ## Stack
 
-Python 3.12 · Django 5.1 · DRF · simplejwt · drf-spectacular · PostgreSQL · gunicorn · WhiteNoise · django-cors-headers · `uv` · pytest · ruff · ipython (dev)
+Python 3.12 · Django 5.1 · DRF · simplejwt · drf-spectacular · MySQL · gunicorn · WhiteNoise · django-cors-headers · `uv` · pytest · ruff · ipython (dev)
 
 ## Começar
 
@@ -27,6 +27,8 @@ Python 3.12 · Django 5.1 · DRF · simplejwt · drf-spectacular · PostgreSQL �
 cp .env.example .env            # ajuste WEB_PORT se a 8000 estiver ocupada
 docker compose up --build
 ```
+
+Os dados do MySQL ficam no volume `mysqldata` e sobrevivem a `docker compose down`. Só `down -v` os apaga.
 
 Ao arrancar, o container corre `migrate` e `seed_access`, que cria as permissões e o perfil `admin`.
 
@@ -48,7 +50,15 @@ u.profiles.add(Profile.objects.get(code='admin'))"
 
 ### Local (sem Docker)
 
-Precisa do [uv](https://docs.astral.sh/uv/). Sem `DATABASE_URL`, usa SQLite.
+Precisa do [uv](https://docs.astral.sh/uv/). Sem `DATABASE_URL`, usa SQLite, que é **outra** base de dados, separada da do Docker (os utilizadores de uma não existem na outra).
+
+Para o `runserver` local usar a mesma base do compose, suba o `db` (`docker compose up -d db`) e defina no `.env`:
+
+```
+DATABASE_URL=mysql://mozcyber:mozcyber@127.0.0.1:3307/mozcyber
+```
+
+O driver `mysqlclient` compila no `uv sync` e precisa de `gcc` e das headers do cliente MySQL (`default-libmysqlclient-dev` e `pkg-config` em Debian/Ubuntu).
 
 ```bash
 cp .env.example .env
@@ -134,8 +144,9 @@ Cada funcionalidade ou endpoint novo precisa de testes: sucesso, 401, 403, valid
 | `SECRET_KEY` | chave secreta do Django (**mude em produção**) | chave de desenvolvimento |
 | `DEBUG` | modo debug | `False` |
 | `ALLOWED_HOSTS` | hosts permitidos, separados por vírgula | `*` |
-| `DATABASE_URL` | ex.: `postgres://user:pass@host:5432/db` | SQLite local |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | credenciais do Postgres no compose | `mozcyber` |
+| `DATABASE_URL` | ex.: `mysql://user:pass@host:3306/db` | SQLite local |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_ROOT_PASSWORD` | credenciais do MySQL no compose | `mozcyber` / `mozcyber` / `mozcyber` / `root` |
+| `DB_PORT` | porta do MySQL publicada no host | `3307` |
 | `ACCESS_TOKEN_MINUTES` / `REFRESH_TOKEN_DAYS` | validade dos tokens | `30` / `7` |
 | `WEB_PORT` | porta publicada no host | `8000` |
 | `INSTALL_DEV` | instala dependências de desenvolvimento na imagem (ipython, pytest) | `true` no compose, `false` no Dockerfile |

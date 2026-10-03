@@ -66,8 +66,10 @@ TEMPLATES = [
     },
 ]
 
-# DATABASE_URL: postgres://user:pass@host:5432/db (docker) ; default sqlite para dev/testes locais
+# DATABASE_URL: mysql://user:pass@host:3306/db ; sem ela usa sqlite (dev/testes locais)
 DATABASES = {"default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "user.User"
